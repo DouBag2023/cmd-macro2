@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>CmdMacro 代码 脚本导入 · AIPassport</title>
+<!-- 内联 favicon（SVG 数据 URI） -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231976d2'/%3E%3Cpath d='M8 10h16v3H8zM8 15h10v3H8zM8 20h13v3H8z' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   CmdMacro 脚本导入前端 —— 纯静态单页（HTML+CSS+JS）
+   视觉：浅色工具型，与固件同源的蓝色强调，命令区用等宽字体。
+   ============================================================ */
+:root{
+  --bg:#eef1f5;
+  --panel:#ffffff;
+  --ink:#1c2733;
+  --muted:#6b7a8c;
+  --line:#e2e7ee;
+  --line-strong:#cfd7e1;
+  --accent:#1976d2;
+  --accent-strong:#115ea8;
+  --accent-weak:#e7f1fb;
+  --ok:#1b9e62;
+  --warn:#b47a1f;
+  --err:#d64545;
+  --err-weak:#fbeaea;
+  --mono:ui-monospace,"Cascadia Code",Consolas,"Courier New",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  --shadow:0 1px 3px rgba(20,34,50,.08);
+  --radius:8px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--sans);
+  font-size:14px;
+  color:var(--ink);
+  background:var(--bg);
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  overflow:hidden;
+}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* ---------- 顶部工具栏 ---------- */
+.toolbar{
+  display:flex;align-items:center;gap:12px;
+  height:54px;padding:0 16px;
+  background:var(--panel);
+  border-bottom:1px solid var(--line);
+  flex:none;
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand svg{flex:none}
+.brand .t1{font-size:15px;font-weight:650;letter-spacing:.2px;white-space:nowrap}
+.brand .t2{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px;border-radius:7px;
+  border:1px solid var(--line-strong);
+  background:#fff;color:var(--ink);
+  font-size:13px;font-weight:550;line-height:1;
+  white-space:nowrap;
+  transition:background .12s,border-color .12s,color .12s;
+}
+.btn:hover{background:#f6f8fb;border-color:#b9c4d1}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
+.btn.primary:disabled{background:#a9c7e8;border-color:#a9c7e8;cursor:not-allowed}
+.btn.danger{color:var(--err);border-color:#e6b8b8}
+.btn.danger:hover{background:var(--err-weak);border-color:var(--err)}
+.btn.sm{padding:5px 9px;font-size:12px;border-radius:6px}
+.btn .ico{display:inline-flex}
+.btn svg{display:block}
+
+/* ---------- 主区：左树 + 右编辑 ---------- */
+.layout{flex:1;display:flex;min-height:0}
+.tree-panel{
+  width:318px;flex:none;
+  background:var(--panel);
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;min-height:0;
+}
+.tree-head{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px;border-bottom:1px solid var(--line);flex:none;
+}
+.tree-head .title{font-size:13px;font-weight:650;flex:1}
+.drop-hint{
+  margin:8px 12px 0;padding:8px 10px;
+  border:1px dashed var(--line-strong);border-radius:7px;
+  color:var(--muted);font-size:12px;line-height:1.5;flex:none;
+  background:#fafbfc;
+}
+.drop-hint b{color:var(--accent)}
+.tree-scroll{flex:1;overflow:auto;padding:8px 6px 16px}
+.tree{user-select:none}
+.trow{display:flex;align-items:center;gap:5px;height:30px;padding:0 6px;border-radius:6px;cursor:pointer;color:var(--ink)}
+.trow:hover{background:#f2f5f9}
+.trow.sel{background:var(--accent-weak);box-shadow:inset 2px 0 0 var(--accent)}
+.trow .chev{
+  width:18px;height:18px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:4px;color:var(--muted);transition:transform .12s;
+}
+.trow .chev svg{transition:transform .12s}
+.trow .chev.open svg{transform:rotate(90deg)}
+.trow .chev.spacer{visibility:hidden}
+.trow .tico{display:inline-flex;flex:none;color:#8aa0b8}
+.trow.script .tico{color:var(--accent)}
+.trow .tname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.trow .badge{font-size:10px;color:var(--muted);background:#eef1f5;border-radius:8px;padding:1px 6px;flex:none}
+.trow.over{border:1px dashed var(--accent)}
+.tree .kids{padding-left:18px}
+.tree .kids.collapsed{display:none}
+.empty-tree{padding:24px 16px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7}
+.empty-tree .eico{display:block;margin:0 auto 8px;color:#c3ccd6}
+
+/* ---------- 右编辑区 ---------- */
+.editor-panel{flex:1;min-width:0;display:flex;flex-direction:column;padding:18px 22px;overflow:auto;background:var(--bg)}
+.editor-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:18px 20px;max-width:860px;width:100%;
+}
+.editor-card .ec-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.ec-head .ico{display:inline-flex;color:var(--accent)}
+.ec-head .k{font-size:15px;font-weight:650;flex:1}
+.ec-head .type-tag{font-size:11px;color:var(--muted);background:#eef1f5;padding:2px 8px;border-radius:10px}
+.field{margin-bottom:14px}
+.field label{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:600;margin-bottom:6px}
+.field label .cnt{margin-left:auto;font-weight:400;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.field label .cnt.over{color:var(--err);font-weight:600}
+.field input[type=text]{
+  width:100%;padding:8px 10px;border:1px solid var(--line-strong);border-radius:7px;font-size:14px;background:#fff;
+}
+.field input[type=text]:focus{border-color:var(--accent);outline:none}
+.field textarea{
+  width:100%;min-height:220px;resize:vertical;padding:10px 12px;
+  border:1px solid var(--line-strong);border-radius:7px;
+  font-family:var(--mono);font-size:13px;line-height:1.55;background:#fbfcfe;color:#16202b;
+  tab-size:4;white-space:pre;
+}
+.field textarea:focus{border-color:var(--accent);outline:none}
+.hint-row{display:flex;align-items:flex-start;gap:6px;font-size:12px;color:var(--muted);line-height:1.5;margin-top:-6px;margin-bottom:14px}
+.hint-row svg{flex:none;margin-top:1px}
+.warn-box{
+  display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;padding:9px 11px;
+  border:1px solid #f0d9a8;background:#fdf6e7;border-radius:7px;color:#7a5a13;font-size:12.5px;line-height:1.55;
+}
+.warn-box svg{flex:none;margin-top:1px}
+.err-box{display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;padding:9px 11px;border:1px solid #e8b6b6;background:var(--err-weak);border-radius:7px;color:var(--err);font-size:12.5px;line-height:1.55}
+.empty-edit{padding:60px 30px;text-align:center;color:var(--muted);max-width:520px;margin:0 auto}
+.empty-edit .big{font-size:15px;color:#7d8b9b;font-weight:600;margin-bottom:8px}
+.empty-edit p{line-height:1.7;font-size:13px;margin:0}
+.editor-actions{display:flex;gap:8px;flex-wrap:wrap}
+.editor-actions .spacer{flex:1}
+.save-hint{font-size:12px;color:var(--ok);display:inline-flex;align-items:center;gap:5px;align-self:center}
+.save-hint svg{display:inline-block}
+
+/* ---------- 传输日志（右侧底部，可折叠） ---------- */
+.log-panel{flex:none;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;max-height:180px}
+.log-head{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+.log-head .dot{width:8px;height:8px;border-radius:50%;background:#b9c4d1}
+.log-head .dot.on{background:var(--ok)}
+.log-head .lbl{font-weight:600;color:var(--ink)}
+.log-head .chev{margin-left:auto;display:inline-flex;transition:transform .15s}
+.log-head.open .chev{transform:rotate(180deg)}
+.log-body{overflow:auto;padding:4px 14px 10px;font-family:var(--mono);font-size:12px;line-height:1.6;display:none;background:#f7f9fc}
+.log-panel.open .log-body{display:block}
+.log-line{white-space:pre-wrap;word-break:break-all;color:#33414f}
+.log-line .t{color:#98a5b3}
+.log-line.ok{color:var(--ok)}
+.log-line.err{color:var(--err)}
+.log-line.sys{color:var(--muted)}
+
+/* ---------- 底部状态条 ---------- */
+.statusbar{
+  flex:none;height:30px;display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:#1c2733;color:#cdd7e2;font-size:12.5px;
+}
+.statusbar .st{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.statusbar .st.err{color:#ff9c9c}
+.statusbar .st.ok{color:#7fe0b0}
+.statusbar .side{flex:none;color:#8fa0b2;font-variant-numeric:tabular-nums}
+
+/* ---------- 连接 + 导入模式栏 ---------- */
+.connbar{
+  flex:none;height:40px;display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:#eef2f6;border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap;
+}
+.connbar .dot{width:9px;height:9px;border-radius:50%;background:#b6c0cc;flex:none}
+.connbar .dot.on{background:var(--ok)}
+.connbar .dot.err{background:var(--err)}
+.connbar .conn-status{font-weight:600;color:#3a4755}
+.connbar .conn-status.busy{color:#b8860b}
+.connbar .sep{width:1px;height:16px;background:#d3dbe4}
+.connbar .lbl{color:#7c8a99}
+.connbar .radio{display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:#3a4755;font-weight:550}
+.connbar .radio input{accent-color:var(--accent);cursor:pointer}
+.connbar .mode-hint{color:var(--muted);font-size:12px}
+@media (max-width:780px){ .connbar .mode-hint{display:none} }
+
+/* ---------- Toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:56px;transform:translateX(-50%) translateY(20px);
+  background:#1c2733;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;
+  opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:60;max-width:80vw;
+  box-shadow:0 6px 20px rgba(0,0,0,.25);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{background:var(--err)}
+#toast.ok{background:var(--ok)}
+
+/* ---------- 模态框 ---------- */
+#modal{position:fixed;inset:0;background:rgba(18,28,40,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+#modal.show{display:flex}
+.modal-card{background:#fff;border-radius:12px;width:100%;max-width:460px;padding:20px 22px;box-shadow:0 12px 40px rgba(0,0,0,.2)}
+.modal-card h3{margin:0 0 10px;font-size:16px}
+.modal-body{font-size:13.5px;line-height:1.7;color:#3a4755;max-height:46vh;overflow:auto}
+.modal-body .m-list{margin:6px 0;padding:0;list-style:none}
+.modal-body .m-list li{padding:3px 0;border-bottom:1px dashed #e7ebf0;font-family:var(--mono);font-size:12px;word-break:break-all}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.modal-card .quiet{font-size:12px;color:var(--muted)}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:780px){
+  body{font-size:15px}
+  .layout{flex-direction:column}
+  .tree-panel{width:100%;border-right:none;border-bottom:1px solid var(--line);max-height:40vh}
+  .tree-scroll{max-height:34vh}
+  .editor-panel{padding:14px 14px;overflow:auto}
+  .editor-panel input[type=text],.editor-panel textarea{font-size:16px}
+  .statusbar{height:34px;font-size:13px}
+  .modal-actions .btn{min-height:44px}
+  .brand .t2{display:none}
+  .toolbar{flex-wrap:wrap;height:auto;padding:8px 10px;gap:6px;row-gap:6px;align-items:center}
+  .brand{width:100%;margin-bottom:2px}
+  .spacer{display:none}
+  .toolbar .btn{min-height:40px;padding:0 12px}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= 顶部工具栏 ================= -->
+<header class="toolbar">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#1976d2"/><path d="M8 10h16v3H8zM8 15h10v3H8zM8 20h13v3H8z" fill="#fff"/></svg>
+    <div>
+      <div class="t1">CmdMacro 脚本导入</div>
+      <div class="t2">AIPassport · BLE 下发到设备</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="btnExport" title="导出整套目录为 JSON 备份">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    导出JSON
+  </button>
+  <button class="btn" id="btnImport" title="从 JSON 备份恢复整套目录">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    导入JSON
+  </button>
+  <button class="btn" id="btnConnect" title="连接 AIPassport 设备并保持长连接（仅点击时才请求蓝牙权限）">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/></svg>
+    连接设备
+  </button>
+  <button class="btn primary" id="btnSend" title="通过已建立的蓝牙连接下发整棵目录树（未连接会自动连接）">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/><line x1="2" y1="8" x2="8" y2="8"/><line x1="16" y1="16" x2="22" y2="16"/></svg>
+    发送到设备
+  </button>
+  <input type="file" id="fileImport" accept=".json,application/json" style="display:none">
+  <input type="file" id="fileTxt" multiple accept=".txt,text/plain" style="display:none">
+</header>
+
+<!-- ================= 连接 + 导入模式栏 ================= -->
+<div class="connbar">
+  <span class="dot" id="connDot"></span>
+  <span class="conn-status" id="connText">未连接</span>
+  <span class="sep"></span>
+  <span class="lbl">导入模式</span>
+  <label class="radio"><input type="radio" name="impMode" value="append" checked><span>追加合并</span></label>
+  <label class="radio"><input type="radio" name="impMode" value="overwrite"><span>全量覆盖</span></label>
+  <span class="mode-hint" id="modeHint">追加：保留设备原脚本，同名覆盖</span>
+  <button class="btn sm" id="btnReconnect" style="display:none" title="蓝牙断开后一键重连">重新连接</button>
+  <button class="btn sm" id="btnDisconnect" style="display:none" title="断开蓝牙连接，释放设备给手机/电脑键盘使用">断开设备</button>
+</div>
+
+<!-- ================= 主区 ================= -->
+<main class="layout">
+  <!-- 左侧：目录树 -->
+  <aside class="tree-panel">
+    <div class="tree-head">
+      <span class="title">脚本目录树</span>
+      <button class="btn sm" id="btnAddFolder" title="在选中位置新建文件夹（未选中则在根目录）">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        文件夹
+      </button>
+      <button class="btn sm" id="btnAddScript" title="在选中位置新建脚本（未选中则在根目录）">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        脚本
+      </button>
+      <button class="btn sm" id="btnAddTxt" title="从本地 txt 文件导入（可在文件选择器多选）">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        txt
+      </button>
+    </div>
+    <div class="drop-hint">
+      拖拽 <b>.txt</b> 文件（可多选，文件名即脚本名）或整个<b>文件夹</b>到这里，
+      自动生成嵌套目录树。
+    </div>
+    <div class="tree-scroll">
+      <div class="tree" id="tree"></div>
+    </div>
+  </aside>
+
+  <!-- 右侧：编辑区 + 日志 -->
+  <section class="editor-panel">
+    <div id="editor"></div>
+  </section>
+</main>
+
+<!-- ================= 传输日志（可折叠） ================= -->
+<div class="log-panel" id="logPanel">
+  <div class="log-head" id="logHead">
+    <span class="dot" id="logDot"></span>
+    <span class="lbl">传输日志</span>
+    <span class="chev"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+  </div>
+  <div class="log-body" id="logBody"></div>
+</div>
+
+<!-- ================= 底部状态条 ================= -->
+<footer class="statusbar">
+  <span class="st" id="statusText">就绪。编辑脚本后点击「发送到设备」通过 BLE 下发。</span>
+  <span class="side" id="statCount">0 脚本</span>
+</footer>
+
+<!-- ================= Toast / 模态 ================= -->
+<div id="toast" role="status"></div>
+<div id="modal"><div class="modal-card">
+  <h3 id="modalTitle"></h3>
+  <div class="modal-body" id="modalBody"></div>
+  <div class="modal-actions">
+    <button class="btn" id="modalAlt" style="display:none"></button>
+    <button class="btn" id="modalCancel">取消</button>
+    <button class="btn" id="modalOk">确认</button>
+  </div>
+</div></div>
+
+<script>
+/* ================================================================
+ *  PART A —— 状态 / 目录树模型 / 渲染 / 节点增删改 / 编辑区
+ * ================================================================ */
+
+/* ---------- 内联 SVG 图标 ---------- */
+const SVG = {
+  chev: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>',
+  folder: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  file: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  warn: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  bluetooth: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/></svg>',
+  trash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  info: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+};
+
+/* ---------- 全局状态 ---------- */
+const state = {
+  nodes: new Map(),       // id -> node
+  rootId: null,
+  selectedId: null,
+  expanded: new Set(),    // 已展开的目录 id
+};
+let seq = 0;
+const nid = () => 'n' + (++seq);
+
+/* 固件大小上限（与 app_scripts.h 一致） */
+const LIM = {
+  scriptName: 32,   // 标题字节上限（APP_TITLE_MAX）
+  folderName: 48,   // 目录/文件名段上限（APP_NAME_MAX）
+  content: 4096,    // 命令内容字节上限（APP_CONTENT_MAX）
+  path: 300,        // 相对路径字节上限（APP_PATH_MAX）
+};
+
+const rootNode = () => state.nodes.get(state.rootId);
+
+/* ---------- 基础工具 ---------- */
+const u8len = s => new TextEncoder().encode(s || '').length;
+const escName = s => (s || '').trim().replace(/[\/\\]/g, '');
+function countScripts(dirNode) {
+  let n = 0;
+  for (const c of dirNode.children) n += c.type === 'script' ? 1 : countScripts(c);
+  return n;
+}
+/* 节点“所在目录”的相对路径（根为 ""） */
+function folderPath(node) {
+  const parts = [];
+  let cur = node.parent;
+  while (cur && cur !== state.rootId) { parts.unshift(cur.name); cur = cur.parent; }
+  return parts.join('/');
+}
+/* 目录自身的相对路径（根为 ""） */
+function dirPath(dirNode) {
+  if (dirNode === state.rootId) return '';
+  const parts = [dirNode.name];
+  let cur = dirNode.parent;
+  while (cur && cur !== state.rootId) { parts.unshift(cur.name); cur = cur.parent; }
+  return parts.join('/');
+}
+/* 脚本在设备上的相对文件路径（含 .txt） */
+function scriptRelPath(node) {
+  const fp = folderPath(node);
+  return fp ? (fp + '/' + node.name + '.txt') : (node.name + '.txt');
+}
+/* 根目录 → 所有目录（深度优先，父在前） */
+function collectDirs() {
+  const out = [];
+  (function walk(d) {
+    for (const c of d.children) if (c.type === 'dir') { out.push(c); walk(c); }
+  })(rootNode());
+  return out;
+}
+/* 根目录 → 所有脚本 */
+function collectScripts() {
+  const out = [];
+  (function walk(d) {
+    for (const c of d.children) c.type === 'script' ? out.push(c) : walk(c);
+  })(rootNode());
+  return out;
+}
+
+/* ---------- 节点创建 ---------- */
+function makeDir(name, parent) {
+  return { id: nid(), type: 'dir', name, children: [], parent };
+}
+function makeScript(name, command, parent) {
+  return { id: nid(), type: 'script', name, command: command || '', parent };
+}
+
+/* ---------- Toast ---------- */
+let toastTimer = null;
+function toast(msg, kind) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = kind ? 'show ' + kind : 'show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, kind === 'err' ? 3800 : 2400);
+}
+
+/* ---------- 模态框（确认 / 提示，支持三键） ---------- */
+let modalResolve = null;
+/* modal({title, body, ok, okClass, alt}) → 确认=true / 取消=false / alt=返回 'alt' */
+function modal(opts) {
+  return new Promise(res => {
+    document.getElementById('modalTitle').textContent = opts.title;
+    document.getElementById('modalBody').innerHTML = opts.body;
+    const okBtn = document.getElementById('modalOk');
+    okBtn.textContent = opts.ok || '确认';
+    okBtn.className = 'btn ' + (opts.okClass || 'primary');
+    const altBtn = document.getElementById('modalAlt');
+    if (opts.alt) { altBtn.style.display = ''; altBtn.textContent = opts.alt; }
+    else altBtn.style.display = 'none';
+    document.getElementById('modal').classList.add('show');
+    modalResolve = res;
+  });
+}
+function closeModal(v) { document.getElementById('modal').classList.remove('show'); if (modalResolve) modalResolve(v); }
+document.getElementById('modalOk').addEventListener('click', () => closeModal(true));
+document.getElementById('modalCancel').addEventListener('click', () => closeModal(false));
+document.getElementById('modalAlt').addEventListener('click', () => closeModal('alt'));
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(false); });
+
+/* ---------- 目录树渲染 ---------- */
+function chevEl(open) {
+  const s = document.createElement('span');
+  s.className = 'chev' + (open ? ' open' : '');
+  s.innerHTML = SVG.chev;
+  return s;
+}
+function buildNode(node) {
+  const holder = document.createElement('div');
+  if (node.type === 'dir') {
+    const expanded = state.expanded.has(node.id);
+    const row = document.createElement('div');
+    row.className = 'trow dir' + (state.selectedId === node.id ? ' sel' : '');
+    row.dataset.id = node.id;
+    const chev = chevEl(expanded);
+    row.appendChild(chev);
+    const ic = document.createElement('span'); ic.className = 'tico'; ic.innerHTML = SVG.folder; row.appendChild(ic);
+    const nm = document.createElement('span'); nm.className = 'tname'; nm.textContent = node.name; row.appendChild(nm);
+    const sc = countScripts(node);
+    const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = sc + (expanded ? '' : ''); row.appendChild(badge);
+    row.addEventListener('click', e => {
+      if (chev.contains(e.target)) { toggleExpand(node.id); }
+      else select(node.id);
+    });
+    // 拖拽落点：把拖入内容放进该文件夹
+    row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('over'); });
+    row.addEventListener('dragleave', () => row.classList.remove('over'));
+    row.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); row.classList.remove('over'); onDropTo(node, e); });
+    holder.appendChild(row);
+    const kids = document.createElement('div');
+    kids.className = 'kids' + (expanded ? '' : ' collapsed');
+    for (const c of node.children) kids.appendChild(buildNode(c));
+    holder.appendChild(kids);
+  } else {
+    const row = document.createElement('div');
+    row.className = 'trow script' + (state.selectedId === node.id ? ' sel' : '');
+    row.dataset.id = node.id;
+    const sp = document.createElement('span'); sp.className = 'chev spacer'; row.appendChild(sp);
+    const ic = document.createElement('span'); ic.className = 'tico'; ic.innerHTML = SVG.file; row.appendChild(ic);
+    const nm = document.createElement('span'); nm.className = 'tname'; nm.textContent = node.name; row.appendChild(nm);
+    if (u8len(node.command) > LIM.content) {
+      const w = document.createElement('span'); w.className = 'tico'; w.style.color = 'var(--err)'; w.title = '命令超出 4096 字节'; w.innerHTML = SVG.warn; row.appendChild(w);
+    }
+    row.addEventListener('click', () => select(node.id));
+    holder.appendChild(row);
+  }
+  return holder;
+}
+function renderTree() {
+  const el = document.getElementById('tree');
+  const scroll = el.scrollTop;
+  el.textContent = '';
+  const root = rootNode();
+  for (const c of root.children) el.appendChild(buildNode(c));
+  if (root.children.length === 0) {
+    const e = document.createElement('div');
+    e.className = 'empty-tree';
+    e.innerHTML = '<span class="eico">' + SVG.folder + '</span>拖入 .txt / 文件夹，或用上方按钮新建';
+    el.appendChild(e);
+  }
+  el.scrollTop = scroll;
+  updateCountBar();
+}
+/* 名称改动时原地刷新该节点行（不整树重建，避免编辑器失焦） */
+function refreshNodeLabel(id) {
+  const row = document.querySelector('.trow[data-id="' + id + '"]');
+  if (!row) return;
+  const nm = row.querySelector('.tname');
+  if (nm) nm.textContent = state.nodes.get(id).name;
+}
+function toggleExpand(id) {
+  state.expanded.has(id) ? state.expanded.delete(id) : state.expanded.add(id);
+  renderTree();
+}
+function updateCountBar() {
+  document.getElementById('statCount').textContent = collectScripts().length + ' 脚本';
+}
+
+/* ---------- 节点增删改 ---------- */
+function addFolder(parentId) {
+  const parent = state.nodes.get(parentId || state.rootId);
+  if (!parent || parent.type !== 'dir') return;
+  const name = uniqueName(parent, '新建文件夹');
+  const d = makeDir(name, parent);
+  parent.children.push(d);
+  state.nodes.set(d.id, d);
+  state.expanded.add(parent.id);
+  state.selectedId = d.id;
+  renderTree(); renderEditor();
+}
+function addScript(parentId, name, command) {
+  const parent = state.nodes.get(parentId || state.rootId);
+  if (!parent || parent.type !== 'dir') return;
+  const nm = uniqueName(parent, name || '新建脚本');
+  const s = makeScript(nm, command || '', parent);
+  parent.children.push(s);
+  state.nodes.set(s.id, s);
+  state.expanded.add(parent.id);
+  state.selectedId = s.id;
+  renderTree(); renderEditor();
+}
+function uniqueName(parent, base) {
+  const exist = new Set(parent.children.map(c => c.name));
+  if (!exist.has(base)) return base;
+  let i = 2;
+  while (exist.has(base + ' (' + i + ')')) i++;
+  return base + ' (' + i + ')';
+}
+function deleteNode(id) {
+  const node = state.nodes.get(id);
+  if (!node || node === state.rootId) return;
+  const parent = node.parent;
+  const isDir = node.type === 'dir';
+  const label = node.name;
+  const body = isDir
+    ? '<p>删除文件夹 <b>' + label + '</b> 将<u>递归删除其下全部脚本</u>，此操作不可撤销。</p>'
+    : '<p>删除脚本 <b>' + label + '</b> 后不可撤销。</p>';
+  modal({ title: '删除确认', body, ok: '删除', okClass: 'danger' }).then(ok => {
+    if (!ok) return;
+    parent.children = parent.children.filter(c => c.id !== id);
+    state.nodes.delete(id);
+    if (state.selectedId === id) state.selectedId = parent.id;
+    renderTree(); renderEditor();
+    toast('已删除「' + label + '」', 'ok');
+  });
+}
+
+/* ---------- 选中 / 编辑区 ---------- */
+function select(id) {
+  if (!state.nodes.has(id)) return;
+  state.selectedId = id;
+  document.querySelectorAll('.trow.sel').forEach(r => r.classList.remove('sel'));
+  const r = document.querySelector('.trow[data-id="' + id + '"]');
+  if (r) r.classList.add('sel');
+  renderEditor();
+}
+
+function renderEditor() {
+  const el = document.getElementById('editor');
+  const node = state.nodes.get(state.selectedId);
+  if (!node) {
+    el.innerHTML = '<div class="empty-edit"><div class="big">还没有选中任何脚本</div><p>在左侧目录树选择一个脚本即可在右侧编辑名称与命令；也可以拖入 .txt 文件或文件夹快速导入。</p></div>';
+    return;
+  }
+  if (node.type === 'dir') renderDirEditor(el, node);
+  else renderScriptEditor(el, node);
+}
+
+function renderDirEditor(el, node) {
+  el.innerHTML = '';
+  const card = document.createElement('div'); card.className = 'editor-card';
+  card.innerHTML = '<div class="ec-head"><span class="ico">' + SVG.folder + '</span><span class="k">文件夹</span><span class="type-tag">目录</span></div>';
+  // 名称
+  const f = document.createElement('div'); f.className = 'field';
+  f.innerHTML = '<label>文件夹名称</label><input type="text" maxlength="48">';
+  const inp = f.querySelector('input'); inp.value = node.name;
+  inp.addEventListener('input', () => {
+    const v = escName(inp.value);
+    const over = u8len(v) > LIM.folderName;
+    inp.classList.toggle('bad', over);
+    if (!over && v) { node.name = v; refreshNodeLabel(node.id); }
+  });
+  card.appendChild(f);
+  // 子项统计
+  const stat = document.createElement('div'); stat.className = 'hint-row';
+  stat.innerHTML = SVG.info + '<span>包含 ' + node.children.filter(c => c.type === 'dir').length + ' 个文件夹、' + node.children.filter(c => c.type === 'script').length + ' 个脚本</span>';
+  card.appendChild(stat);
+  // 操作
+  const acts = document.createElement('div'); acts.className = 'editor-actions';
+  const b1 = mkBtn('新建脚本', 'primary', () => addScript(node.id));
+  const b2 = mkBtn('新建文件夹', '', () => addFolder(node.id));
+  const b3 = mkBtn('删除文件夹', 'danger', () => deleteNode(node.id));
+  acts.append(b1, b2, b3); card.appendChild(acts);
+  el.appendChild(card);
+}
+
+function renderScriptEditor(el, node) {
+  el.innerHTML = '';
+  const card = document.createElement('div'); card.className = 'editor-card';
+  card.innerHTML = '<div class="ec-head"><span class="ico">' + SVG.file + '</span><span class="k">脚本</span><span class="type-tag">' + scriptRelPath(node) + '</span></div>';
+  // 名称（支持中文）
+  const f = document.createElement('div'); f.className = 'field';
+  f.innerHTML = '<label>脚本名称<span class="cnt">' + u8len(node.name) + ' / ' + LIM.scriptName + ' 字节</span></label><input type="text">';
+  const inp = f.querySelector('input'); inp.value = node.name;
+  inp.addEventListener('input', () => {
+    const v = escName(inp.value);
+    const over = u8len(v) > LIM.scriptName;
+    inp.classList.toggle('bad', over);
+    f.querySelector('.cnt').textContent = u8len(v) + ' / ' + LIM.scriptName + ' 字节';
+    f.querySelector('.cnt').classList.toggle('over', over);
+    if (!over && v) { node.name = v; refreshNodeLabel(node.id); }
+  });
+  card.appendChild(f);
+  // 命令内容
+  const cf = document.createElement('div'); cf.className = 'field';
+  cf.innerHTML = '<label>命令内容（纯英文 CMD）<span class="cnt">' + u8len(node.command) + ' / ' + LIM.content + ' 字节</span></label><textarea spellcheck="false" placeholder="echo Hello, CmdMacro!&#10;timeout /t 2&#10;echo Done"></textarea>';
+  const ta = cf.querySelector('textarea'); ta.value = node.command;
+  ta.addEventListener('input', () => {
+    node.command = ta.value;
+    const n = u8len(node.command);
+    cf.querySelector('.cnt').textContent = n + ' / ' + LIM.content + ' 字节';
+    cf.querySelector('.cnt').classList.toggle('over', n > LIM.content);
+    markScriptOver(node.id, n > LIM.content);
+  });
+  card.appendChild(cf);
+  if (u8len(node.command) > LIM.content) {
+    const w = document.createElement('div'); w.className = 'err-box';
+    w.innerHTML = SVG.warn + '<span>命令内容超过 ' + LIM.content + ' 字节，设备端会被截断，请精简后再发送。</span>';
+    card.appendChild(w);
+  }
+  // 提示 + 操作
+  const hint = document.createElement('div'); hint.className = 'hint-row';
+  hint.innerHTML = SVG.info + '<span>命令仅支持英文（设备端会以 30ms/字符模拟键盘输入）。中文会作为脚本名称显示。</span>';
+  card.appendChild(hint);
+  const acts = document.createElement('div'); acts.className = 'editor-actions';
+  const del = mkBtn('删除脚本', 'danger', () => deleteNode(node.id));
+  acts.appendChild(del); card.appendChild(acts);
+  el.appendChild(card);
+}
+function markScriptOver(id, over) {
+  const row = document.querySelector('.trow.script[data-id="' + id + '"]');
+  if (!row) return;
+  let w = row.querySelector('.tico[title*="4096"]');
+  if (over && !w) { w = document.createElement('span'); w.className = 'tico'; w.style.color = 'var(--err)'; w.title = '命令超出 4096 字节'; w.innerHTML = SVG.warn; row.appendChild(w); }
+  else if (!over && w) w.remove();
+}
+function mkBtn(label, kind, onClick) {
+  const b = document.createElement('button');
+  b.className = 'btn' + (kind ? ' ' + kind : '');
+  b.textContent = label;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+/* ---------- 工具栏按钮与日志折叠 ---------- */
+document.getElementById('btnAddFolder').addEventListener('click', () => addFolder(state.selectedId && state.nodes.get(state.selectedId).type === 'dir' ? state.selectedId : state.rootId));
+document.getElementById('btnAddScript').addEventListener('click', () => addScript(state.selectedId && state.nodes.get(state.selectedId).type === 'dir' ? state.selectedId : state.rootId));
+document.getElementById('btnAddTxt').addEventListener('click', () => document.getElementById('fileTxt').click());
+
+const logPanel = document.getElementById('logPanel');
+document.getElementById('logHead').addEventListener('click', () => {
+  logPanel.classList.toggle('open');
+  document.getElementById('logHead').classList.toggle('open');
+});
+
+/* 初始化根目录并渲染 */
+(function init() {
+  state.rootId = nid();
+  state.nodes.set(state.rootId, { id: state.rootId, type: 'dir', children: [], parent: null });
+  state.expanded.add(state.rootId);
+  // 预置一条示例脚本，便于初次体验
+  addScript(state.rootId, 'hello', 'echo Hello, CmdMacro!\r\ntimeout /t 2\r\necho Done\r\n');
+  renderTree();
+})();
+/*JS_PART_A*/
+/* ================================================================
+ *  PART B —— 拖拽导入 / 文件选择器 / JSON 导出与导入
+ * ================================================================ */
+
+/* ---------- 拖拽目标：整页拖放，落点取决于鼠标悬停的目录行 ---------- */
+let dropTargetId = state.rootId;      // 当前拖拽悬停的目录 id
+function currentDropDir() {
+  return state.nodes.get(dropTargetId) && state.nodes.get(dropTargetId).type === 'dir'
+    ? dropTargetId : state.rootId;
+}
+/* 拖拽悬停时高亮对应目录行，并记录落点 */
+document.addEventListener('dragover', e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  const row = e.target.closest ? e.target.closest('.trow.dir') : null;
+  document.querySelectorAll('.trow.over').forEach(r => r.classList.remove('over'));
+  if (row) { row.classList.add('over'); dropTargetId = row.dataset.id; }
+  else dropTargetId = state.rootId;
+});
+document.addEventListener('dragleave', e => {
+  const row = e.target.closest ? e.target.closest('.trow.dir') : null;
+  if (row) row.classList.remove('over');
+});
+/* 目录行自身的 drop 由 buildNode 里的监听处理（onDropTo） */
+function onDropTo(dirNode, e) { dropTargetId = dirNode.id; handleDrop(e); }
+
+function hasFiles(e) {
+  return e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+}
+/* 全局 drop：落在目录行上时已由行级监听处理并 stopPropagation；这里处理其余区域 */
+document.addEventListener('drop', e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  document.querySelectorAll('.trow.over').forEach(r => r.classList.remove('over'));
+  handleDrop(e);
+});
+
+/* ---------- 解析拖入的 FileSystemEntry / File ---------- */
+async function handleDrop(e) {
+  const dt = e && e.dataTransfer;
+  if (!dt || !dt.items) return;
+  const target = currentDropDir();
+  const items = Array.from(dt.items);
+  let imported = 0;
+  for (const it of items) {
+    if (it.kind !== 'file') continue;
+    const entry = (it.webkitGetAsEntry && typeof it.webkitGetAsEntry === 'function') ? it.webkitGetAsEntry() : null;
+    if (entry && entry.isDirectory) {
+      imported += await importDirEntry(entry, target);
+    } else if (entry && entry.isFile) {
+      imported += await importFileEntry(entry, target);
+    } else {
+      const f = it.getAsFile();
+      if (f && isTxt(f)) imported += await importTxtFile(f, target);
+    }
+  }
+  if (imported > 0) {
+    state.expanded.add(target);
+    renderTree(); renderEditor();
+    toast('已导入 ' + imported + ' 个脚本', 'ok');
+  } else {
+    toast('没有可导入的 .txt 文件', 'err');
+  }
+}
+
+function isTxt(f) {
+  return /\.txt$/i.test(f.name) || (f.type || '').indexOf('text') === 0;
+}
+
+/* 逐项读 File 文本并新建脚本；返回导入个数 */
+function importTxtFile(file, parentId) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => {
+      const name = file.name.replace(/\.txt$/i, '');
+      addScript(parentId, name, r.result || '');
+      res(1);
+    };
+    r.onerror = () => res(0);
+    r.readAsText(file, 'utf-8');
+  });
+}
+/* 单个 FileEntry → 脚本 */
+function importFileEntry(entry, parentId) {
+  return new Promise(res => {
+    entry.file(f => {
+      if (!isTxt(f)) return res(0);
+      importTxtFile(f, parentId).then(res);
+    }, () => res(0));
+  });
+}
+/* 目录 Entry → 递归建目录 + 脚本 */
+function importDirEntry(entry, parentId) {
+  return new Promise(res => {
+    const reader = entry.createReader();
+    const all = [];
+    (function readBatch() {
+      reader.readEntries(batch => {
+        if (batch.length === 0) {
+          if (all.length === 0) return res(0);
+          (async () => {
+            const dirNode = makeDir(entry.name, state.nodes.get(parentId));
+            dirNode.parent.children.push(dirNode);
+            state.nodes.set(dirNode.id, dirNode);
+            let n = 0;
+            for (const sub of all) {
+              if (sub.isDirectory) n += await importDirEntry(sub, dirNode.id);
+              else n += await importFileEntry(sub, dirNode.id);
+            }
+            res(n);
+          })();
+        } else {
+          all.push(...batch);
+          readBatch();
+        }
+      }, () => res(0));
+    })();
+  });
+}
+
+/* ---------- 文件选择器（移动端兜底，支持多选 .txt） ---------- */
+document.getElementById('fileTxt').addEventListener('change', async e => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  if (!files.length) return;
+  const target = currentDropDir();
+  let n = 0;
+  for (const f of files) if (isTxt(f)) n += await importTxtFile(f, target);
+  if (n) { state.expanded.add(target); renderTree(); renderEditor(); toast('已导入 ' + n + ' 个脚本', 'ok'); }
+  else toast('没有 .txt 文件', 'err');
+});
+
+/* ---------- JSON 导出 ---------- */
+function toJson(node) {
+  if (node.type === 'script') return { type: 'script', name: node.name, command: node.command };
+  return { type: 'dir', name: node.name, children: node.children.map(toJson) };
+}
+document.getElementById('btnExport').addEventListener('click', () => {
+  const data = { app: 'cmd-macro', version: 1, tree: toJson(rootNode()) };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  const ts = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cmd-macro-scripts-' + ts.getFullYear() + pad(ts.getMonth() + 1) + pad(ts.getDate()) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('已导出 JSON 备份');
+});
+
+/* ---------- JSON 导入（恢复整套目录） ---------- */
+document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change', e => {
+  const f = (e.target.files || [])[0];
+  e.target.value = '';
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      if (!data || !data.tree) throw new Error('缺少 tree 字段');
+      const newRoot = fromJson(data.tree);
+      // 用导入结果替换当前整树
+      state.nodes.clear();
+      state.rootId = newRoot.id;
+      state.nodes.set(state.rootId, newRoot);
+      state.selectedId = null;
+      state.expanded.clear();
+      state.expanded.add(state.rootId);
+      renderTree(); renderEditor();
+      toast('已从 JSON 恢复 ' + countScripts(rootNode()) + ' 个脚本', 'ok');
+    } catch (err) {
+      toast('JSON 无效：' + err.message, 'err');
+    }
+  };
+  r.readAsText(f, 'utf-8');
+});
+function fromJson(obj) {
+  if (obj.type === 'script') {
+    return makeScript(String(obj.name || '脚本').trim() || '脚本', String(obj.command || ''), null);
+  }
+  const d = makeDir(String(obj.name || '文件夹').trim() || '文件夹', null);
+  (obj.children || []).forEach(c => {
+    const child = fromJson(c);
+    child.parent = d;
+    d.children.push(child);
+  });
+  return d;
+}
+/*JS_PART_B*/
+/* ================================================================
+ *  PART C —— Web Bluetooth 长连接 + JSON 分包导入
+ *  服务 0xFFE0 · RX 0xFFE1(写) · TX 0xFFE2(通知)，每写一包固件回一条 TX。
+ *  每包 = [1字节类型 + 负载]，必须用 writeValueWithResponse。
+ *  JSON 分包导入（与固件 app_scripts.c 一致）：
+ *    0x20 STATE_QUERY  → STATE:<0|1>（0=空闲可导入 / 1=脚本执行中）
+ *    0x21 IMPORT_BEGIN → OK:BEGIN | BUSY:1
+ *    0x22 IMPORT_CHUNK → ACK:<seq> | NACK:<seq>:<expected>
+ *    0x23 IMPORT_END   → OK:IMPORT:<files>:<dirs> | ERR:IMPORT:<reason>
+ *  CRC：包内数据 CRC-16/CCITT-FALSE，整包 CRC-32/IEEE（与固件一致）。
+ *  长连接：点击【连接设备】后保持，可多次下发；断线提示并可一键重连。
+ * ================================================================ */
+const PROTO = { START:0x01, PATH:0x08, TITLE:0x02, DATA:0x03, END:0x04,
+                MKDIR:0x0B, DEL:0x05, DELDIR:0x0C, LIST:0x06, ABORT:0x10,
+                STATE:0x20, BEGIN:0x21, CHUNK:0x22, END2:0x23 };
+const BLE_CFG = { name:'AIPassport-CmdMacro', svc:0xFFE0, rx:0xFFE1, tx:0xFFE2, hid:0x1812 };
+const JSON_MAX = 256 * 1024;                 // 与固件 APP_IMPORT_JSON_MAX 一致
+
+let gatt = null;              // {device, server, rx, tx, maxPayload}
+let gattBusy = false;
+let txResp = [];              // 收到的 TX 状态行队列
+let txWaiter = null;
+
+/* ---------- 日志 / 状态 ---------- */
+function logLine(msg, cls) {
+  const body = document.getElementById('logBody');
+  const d = document.createElement('div');
+  d.className = 'log-line' + (cls ? ' ' + cls : '');
+  const t = new Date(), p = n => String(n).padStart(2, '0');
+  d.innerHTML = '<span class="t">' + p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds()) + '</span> ' + esc(msg);
+  body.appendChild(d);
+  body.scrollTop = body.scrollHeight;
+  document.getElementById('logDot').classList.add('on');
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function setStatus(msg, cls) {
+  const el = document.getElementById('statusText');
+  el.textContent = msg;
+  el.className = 'st' + (cls ? ' ' + cls : '');
+}
+/* 更新连接状态指示 */
+function setConn(state, text) {
+  const dot = document.getElementById('connDot');
+  const t = document.getElementById('connText');
+  const rc = document.getElementById('btnReconnect');
+  const dc = document.getElementById('btnDisconnect');
+  dot.className = 'dot' + (state === 'on' ? ' on' : state === 'err' ? ' err' : '');
+  t.textContent = text;
+  t.className = 'conn-status' + (state === 'busy' ? ' busy' : '');
+  rc.style.display = (state === 'err') ? '' : 'none';
+  dc.style.display = (state === 'on') ? '' : 'none';
+}
+
+/* 主动断开设备连接：释放唯一的 BLE 连接，让手机/电脑键盘主机恢复可连接 */
+function disconnectDevice() {
+  if (gatt && gatt.device && gatt.device.gatt && gatt.device.gatt.connected) {
+    gatt.device.gatt.disconnect();
+    setConn('off', '未连接');
+    setStatus('已断开设备连接，手机/电脑键盘可重新连接');
+    logLine('已断开设备连接（释放给键盘主机）', 'sys');
+  }
+}
+
+/* ---------- TX 通知处理 ---------- */
+function onTx(ev) {
+  const dv = ev.target.value;
+  const bytes = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+  const s = new TextDecoder().decode(bytes).replace(/[\r\n]+$/, '');
+  txResp.push(s);
+  const cls = (s.startsWith('ERR') || s.startsWith('NACK')) ? 'err'
+    : (s.startsWith('OK') || s.startsWith('ACK') || s.startsWith('LIST') ||
+       s.startsWith('SCR') || s.startsWith('STATE')) ? 'ok' : 'sys';
+  logLine('设备: ' + s, cls);
+  if (txWaiter && txWaiter.pred(s)) { const w = txWaiter; txWaiter = null; clearTimeout(w.timer); w.resolve(s); }
+}
+/* 等待一条满足 pred 的 TX 状态行；超时 reject */
+function waitLine(pred, timeout) {
+  return new Promise((resolve, reject) => {
+    const i = txResp.findIndex(pred);
+    if (i >= 0) return resolve(txResp.splice(i, 1)[0]);
+    const w = { pred, resolve, timer: null };
+    w.timer = setTimeout(() => { if (txWaiter === w) { txWaiter = null; reject(new Error('等待设备响应超时')); } }, timeout || 4000);
+    txWaiter = w;
+  });
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- CRC（与固件一致） ---------- */
+function crc16(data, off, len) {            // CRC-16/CCITT-FALSE
+  let c = 0xFFFF;
+  for (let i = 0; i < len; i++) {
+    c ^= (data[off + i] & 0xFF) << 8;
+    for (let b = 0; b < 8; b++) c = (c & 0x8000) ? (((c << 1) ^ 0x1021) & 0xFFFF) : ((c << 1) & 0xFFFF);
+  }
+  return c;
+}
+function crc32(data) {                       // CRC-32/IEEE（反射）
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < data.length; i++) {
+    c ^= data[i];
+    for (let b = 0; b < 8; b++) c = (c & 1) ? ((c >>> 1) ^ 0xEDB88320) >>> 0 : (c >>> 1);
+  }
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+/* ---------- 写包 ---------- */
+function le16(n) { const b = new Uint8Array(2); b[0] = n & 0xFF; b[1] = (n >> 8) & 0xFF; return b; }
+function le32(n) { const b = new Uint8Array(4); b[0] = n & 0xFF; b[1] = (n >> 8) & 0xFF; b[2] = (n >> 16) & 0xFF; b[3] = (n >>> 24) & 0xFF; return b; }
+async function writePkt(type, payloadU8) {
+  const pkt = new Uint8Array(payloadU8.length + 1);
+  pkt[0] = type; pkt.set(payloadU8, 1);
+  await gatt.rx.writeValueWithResponse(pkt);   // 固件只处理“写-带-响应”
+}
+
+/* ---------- MTU 探测（无害 PATH 包试探单包负载上限） ---------- */
+async function probeMtu() {
+  for (const size of [240, 96, 19]) {
+    txResp.length = 0;
+    const pkt = new Uint8Array(size + 1);
+    pkt[0] = PROTO.PATH; pkt.fill(0x41, 1);
+    try { await gatt.rx.writeValueWithResponse(pkt); } catch (e) { continue; }
+    await sleep(300);
+    if (txResp.filter(s => s === 'OK:PATH').length === 1) return size;
+  }
+  return 19;
+}
+
+/* ---------- 发送前校验 ---------- */
+function validateTree() {
+  const issues = [];
+  const seenPath = new Set();
+  (function walk(d) {
+    for (const c of d.children) {
+      if (c.type === 'dir') {
+        if (!c.name.trim()) issues.push('存在空的文件夹名');
+        else if (u8len(c.name) > LIM.folderName) issues.push('文件夹名超长(>' + LIM.folderName + '字节): ' + c.name);
+        walk(c);
+      } else {
+        const nb = u8len(c.name), cb = u8len(c.command);
+        const rp = scriptRelPath(c);
+        if (!c.name.trim()) issues.push('存在空的脚本名');
+        else if (nb > LIM.scriptName) issues.push('脚本名超长(>' + LIM.scriptName + '字节): ' + c.name);
+        if (cb > LIM.content) issues.push('命令超长(>' + LIM.content + '字节): ' + c.name);
+        if (u8len(rp) > LIM.path) issues.push('脚本路径超长(>' + LIM.path + '字节): ' + rp);
+        if (seenPath.has(rp)) issues.push('脚本路径重复: ' + rp);
+        seenPath.add(rp);
+      }
+    }
+  })(rootNode());
+  return issues;
+}
+
+/* ---------- 连接设备（长连接，可多次发送） ---------- */
+async function connectDevice() {
+  if (gatt && gatt.device && gatt.device.gatt && gatt.device.gatt.connected) {
+    setConn('on', '已连接 ' + gatt.device.name);
+    setStatus('已连接，可随时下发脚本');
+    return;
+  }
+  if (!('bluetooth' in navigator)) {
+    setStatus('当前浏览器不支持 Web Bluetooth（需 HTTPS）', 'err');
+    toast('浏览器不支持 Web Bluetooth（需 HTTPS 环境）', 'err');
+    return;
+  }
+  if (gattBusy) return;
+  gattBusy = true;
+  try {
+    // 仅在用户点击时请求蓝牙权限
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [BLE_CFG.svc, BLE_CFG.hid]
+    });
+    device.addEventListener('gattserverdisconnected', () => {
+      gatt = null;
+      setConn('err', '设备已断开（可点击重新连接）');
+      setStatus('蓝牙已断开', 'err');
+      logLine('设备已断开', 'err');
+    });
+    setStatus('正在连接设备…');
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService(BLE_CFG.svc);
+    const rx = await svc.getCharacteristic(BLE_CFG.rx);
+    const tx = await svc.getCharacteristic(BLE_CFG.tx);
+    tx.addEventListener('characteristicvaluechanged', onTx);
+    await tx.startNotifications();
+    gatt = { device, server, rx, tx, maxPayload: 19 };
+    logLine('已连接 ' + device.name + '，探测 MTU…', 'sys');
+    setStatus('已连接，探测蓝牙 MTU…');
+    gatt.maxPayload = await probeMtu();
+    logLine('单包负载上限 ' + gatt.maxPayload + ' 字节', 'sys');
+    setConn('on', '已连接 ' + device.name);
+    setStatus('已连接，可随时下发脚本');
+  } catch (err) {
+    setStatus('连接失败：' + err.message, 'err');
+    toast('连接失败：' + err.message, 'err');
+  } finally {
+    gattBusy = false;
+  }
+}
+
+/* ---------- 组装整包 JSON（追加/覆盖） ---------- */
+function buildImportPayload() {
+  const mode = ((document.querySelector('input[name=impMode]:checked') || {}).value === 'overwrite') ? 1 : 0;
+  const data = { app: 'cmd-macro', version: 1, tree: toJson(rootNode()) };
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  return { mode, bytes };
+}
+
+/* ---------- 发送入口 ---------- */
+document.getElementById('btnSend').addEventListener('click', sendToDevice);
+document.getElementById('btnConnect').addEventListener('click', connectDevice);
+document.getElementById('btnReconnect').addEventListener('click', connectDevice);
+document.getElementById('btnDisconnect').addEventListener('click', disconnectDevice);
+document.querySelectorAll('input[name=impMode]').forEach(r => r.addEventListener('change', () => {
+  const over = r.value === 'overwrite';
+  document.getElementById('modeHint').textContent = over
+    ? '覆盖：清空设备全部脚本后写入本次目录'
+    : '追加：保留设备原脚本，同名覆盖';
+}));
+
+async function sendToDevice() {
+  if (gattBusy) return;
+  const issues = validateTree();               // 同步校验
+  if (issues.length) {
+    modal({
+      title: '无法发送：有 ' + issues.length + ' 处问题',
+      body: '<ul class="m-list">' + issues.map(i => '<li>' + esc(i) + '</li>').join('') + '</ul><p class="quiet">请修正后重试（右侧编辑区显示各字段字节数）。</p>',
+      ok: '知道了'
+    });
+    return;
+  }
+  if (!('bluetooth' in navigator)) {
+    setStatus('当前浏览器不支持 Web Bluetooth（需 HTTPS）', 'err');
+    toast('需 HTTPS 环境才支持蓝牙', 'err');
+    return;
+  }
+  // 未连接则先连接（保持长连接）
+  if (!(gatt && gatt.device && gatt.device.gatt && gatt.device.gatt.connected)) {
+    setStatus('未连接，正在请求蓝牙连接…');
+    await connectDevice();
+    if (!(gatt && gatt.device && gatt.device.gatt && gatt.device.gatt.connected)) return;
+  }
+  gattBusy = true;
+  const btn = document.getElementById('btnSend');
+  btn.disabled = true;
+  try {
+    // 1) 查询设备状态
+    await writePkt(PROTO.STATE, new Uint8Array(0));
+    const st = await waitLine(s => s.startsWith('STATE:'), 4000);
+    if (st === 'STATE:1') {
+      setConn('busy', '设备忙（脚本执行中）');
+      modal({
+        title: '设备正在执行脚本',
+        body: '<p>设备当前正在执行 HID 脚本输入，暂时无法导入。</p><p class="quiet">请等待执行完毕，或先在设备上暂停/停止后再发送。</p>',
+        ok: '知道了'
+      });
+      setStatus('设备忙，拒绝导入', 'err');
+      return;
+    }
+    // 2) 组包
+    const { mode, bytes } = buildImportPayload();
+    if (bytes.length > JSON_MAX) { toast('数据过大（>' + (JSON_MAX / 1024) + 'KB），请精简', 'err'); return; }
+    const chunkCap = Math.max(4, gatt.maxPayload - 6);   // 每包数据上限（留出 type+6B 头）
+    const totalChunks = Math.max(1, Math.ceil(bytes.length / chunkCap));
+    logLine('发送 ' + bytes.length + ' 字节 / ' + totalChunks + ' 包，模式=' + (mode ? '全量覆盖' : '追加合并'), 'sys');
+    // 3) BEGIN
+    const beginP = new Uint8Array(7);
+    beginP[0] = mode; beginP.set(le32(bytes.length), 1); beginP.set(le16(totalChunks), 5);
+    await writePkt(PROTO.BEGIN, beginP);
+    const br = await waitLine(s => s.startsWith('OK:BEGIN') || s.startsWith('BUSY') || s.startsWith('ERR:'), 4000);
+    if (br.startsWith('BUSY')) {
+      modal({ title: '设备正在执行脚本', body: '<p>设备忙，暂无法导入，请稍后再试。</p>', ok: '知道了' });
+      setStatus('设备忙，拒绝导入', 'err');
+      return;
+    }
+    if (!br.startsWith('OK:BEGIN')) throw new Error(br);
+    setStatus('设备就绪，正在分包发送…');
+    // 4) 分包发送（每包等 ACK，失败重试 3 次）
+    for (let seq = 0; seq < totalChunks; seq++) {
+      const off = seq * chunkCap;
+      const dlen = Math.min(chunkCap, bytes.length - off);
+      const chunk = new Uint8Array(dlen); chunk.set(bytes.subarray(off, off + dlen));
+      const pkt = new Uint8Array(6 + dlen);
+      pkt.set(le16(seq), 0); pkt.set(le16(totalChunks), 2); pkt.set(le16(crc16(chunk, 0, dlen)), 4); pkt.set(chunk, 6);
+      let ok = false;
+      for (let tn = 0; tn < 3 && !ok; tn++) {
+        await writePkt(PROTO.CHUNK, pkt);
+        const line = await waitLine(s => s.startsWith('ACK:' + seq) || s.startsWith('NACK:' + seq) || s.startsWith('ERR:'), 4000);
+        if (line.startsWith('ACK:' + seq)) ok = true;
+        else if (line.startsWith('NACK:' + seq)) await sleep(60);
+        else throw new Error(line);
+      }
+      if (!ok) throw new Error('分包 ' + seq + ' 发送失败');
+      setStatus('发送 ' + (seq + 1) + '/' + totalChunks);
+    }
+    // 5) END（整包 CRC32）
+    await writePkt(PROTO.END2, le32(crc32(bytes)));
+    const endR = await waitLine(s => s.startsWith('OK:IMPORT') || s.startsWith('ERR:'), 8000);
+    if (endR.startsWith('OK:IMPORT')) {
+      const m = endR.match(/OK:IMPORT:(\d+):(\d+)/);
+      setStatus('导入成功 ✔ ' + (m ? m[1] : '?') + ' 脚本、' + (m ? m[2] : '?') + ' 文件夹', 'ok');
+      logLine('导入成功: ' + endR, 'ok');
+      toast('已导入到设备', 'ok');
+    } else {
+      throw new Error(endR);
+    }
+  } catch (err) {
+    setStatus('发送失败：' + err.message, 'err');
+    logLine('失败: ' + err.message, 'err');
+    toast('发送失败：' + err.message, 'err');
+  } finally {
+    gattBusy = false;
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
